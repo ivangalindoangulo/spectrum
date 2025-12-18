@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  prism:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: prism
+    volumes:
+      - .:/app
+    environment:
+      - QUESTDB_HOST=http://questdb:9000
+    networks:
+      - spectrum-network
+    restart: unless-stopped
+    command: python main.py
+
+networks:
+  spectrum-network:
+    external: true

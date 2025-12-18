@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  questdb:
+    image: questdb/questdb:latest
+    container_name: spectrum-questdb
+    ports:
+      - "9000:9000"
+      - "9009:9009"
+      - "8812:8812"
+    volumes:
+      - ./questdb/data:/var/lib/questdb
+    restart: unless-stopped
+    environment:
+      - QDB_CAIRO_COMMIT_LAG=1000
+      - QDB_CAIRO_MAX_UNCOMMITTED_ROWS=1000
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: spectrum-grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./grafana/data:/var/lib/grafana
+    restart: unless-stopped
+    depends_on:
+      - questdb
+
+  jobmanager:
+    image: flink:latest
+    container_name: spectrum-jobmanager
+    ports:
+      - "8081:8081"
+    command: jobmanager
+    environment:
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: jobmanager
+    restart: unless-stopped
+
+  taskmanager:
+    image: flink:latest
+    container_name: spectrum-taskmanager
+    depends_on:
+      - jobmanager
+    command: taskmanager
+    environment:
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: jobmanager
+        taskmanager.numberOfTaskSlots: 2
+    restart: unless-stopped
+
+  schema-init:
+    image: python:3.9-slim
+    container_name: spectrum-schema-init
+    depends_on:
+      - questdb
+    volumes:
+      - ./questdb:/app
+    working_dir: /app
+    command: >
+      bash -c "pip install requests && python init.py"
+    restart: on-failure
+
+networks:
+  default:
+    name: spectrum-network

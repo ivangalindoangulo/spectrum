@@ -1,0 +1,24 @@
+name: prism-env
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - pip
+  - numpy
+  - pandas
+  - scipy
+  - scikit-learn
+  - matplotlib
+  - seaborn
+  - requests
+  - ipykernel
+  - ta-lib
+  - pip:
+    - questdb
+    - apache-flink
+    - tiingo
+    - websocket-client
+    - vectorbt
+    - backtrader
+    - qf-lib
