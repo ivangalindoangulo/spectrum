@@ -1,1 +1,0 @@
-®Gáz<l@®Gáz<l@®Gáz<l@®Gáz<l@®Gáz<l@®Gáz<l@®Gáz<l@®Gáz<l@®Gáz<l@®Gáz<l@®Gáz<l@®Gáz<l@®Gáz<l@®Gáz<l@

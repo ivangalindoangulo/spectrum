@@ -1,1 +1,0 @@
-®GázFg@®GázFg@®GázFg@®GázFg@®GázFg@®GázFg@®GázFg@®GázFg@®GázFg@®GázFg@®GázFg@®GázFg@®GázFg@®GázFg@

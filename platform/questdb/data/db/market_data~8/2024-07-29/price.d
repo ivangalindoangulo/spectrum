@@ -1,1 +1,0 @@
-Ház®Gk@Ház®Gk@Ház®Gk@Ház®Gk@Ház®Gk@Ház®Gk@Ház®Gk@Ház®Gk@Ház®Gk@Ház®Gk@Ház®Gk@Ház®Gk@Ház®Gk@Ház®Gk@

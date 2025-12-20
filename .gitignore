@@ -1,4 +1,7 @@
-# Python
+# Spectrum Data
+platform/*/data/
+platform/questdb/data/
+platform/grafana/data/
 __pycache__/
 *.py[cod]
 *$py.class

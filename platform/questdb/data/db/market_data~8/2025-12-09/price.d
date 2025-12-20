@@ -1,1 +1,0 @@
-{ÆG·Rq@{ÆG·Rq@{ÆG·Rq@{ÆG·Rq@{ÆG·Rq@{ÆG·Rq@{ÆG·Rq@{ÆG·Rq@{ÆG·Rq@{ÆG·Rq@{ÆG·Rq@{ÆG·Rq@{ÆG·Rq@{ÆG·Rq@
