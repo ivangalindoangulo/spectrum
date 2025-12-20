@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  prism:
+  spectrum-prism:
     build:
       context: .
       dockerfile: Dockerfile
@@ -10,6 +10,7 @@ services:
       - .:/app
     environment:
       - QUESTDB_HOST=http://questdb:9000
+      - TIINGO_API_KEY=${TIINGO_API_KEY}
     networks:
       - spectrum-network
     restart: unless-stopped

@@ -1,0 +1,1 @@
+®Gáz4g@®Gáz4g@®Gáz4g@®Gáz4g@®Gáz4g@®Gáz4g@®Gáz4g@®Gáz4g@®Gáz4g@®Gáz4g@®Gáz4g@®Gáz4g@®Gáz4g@®Gáz4g@

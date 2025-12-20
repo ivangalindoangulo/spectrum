@@ -8,27 +8,29 @@
 
 Spectrum es un stack de trading moderno, escalable y modular diseñado para el análisis cuantitativo, la ingesta de datos en tiempo real y el trading algorítmico. Separa la lógica central de la aplicación (`Prism`) de la infraestructura subyacente (`Platform`) para garantizar flexibilidad y rendimiento.
 
-## 🏗️ Arquitectura
+## 🏗️ Arquitectura Refinada
 
-Spectrum está construido con una arquitectura inspirada en microservicios, desacoplando la capa de procesamiento de datos de la capa de almacenamiento y visualización.
+Spectrum utiliza una arquitectura híbrida donde **QuestDB** actúa como la fuente de verdad tanto para investigación como para producción.
 
 ```mermaid
 graph TD
-    Sources[APIs de Datos de Mercado] -->|Ingesta| Prism[Core Prism]
+    %% External Data Source
+    Tiingo[Tiingo API] -->|Datos Crudos| Ingester[Servicio de Ingesta]
     
-    subgraph Platform [Capa de Infraestructura]
-        QuestDB[(QuestDB)]
-        Grafana[Dashboard Grafana]
-        Flink[Apache Flink]
-    end
+    %% Storage Layer
+    Ingester -->|Insertar| QuestDB[(QuestDB)]
     
-    subgraph Application [Capa de Aplicación]
-        Prism -->|Escritura| QuestDB
-        Prism -->|Stream| Flink
-        Notebooks[Jupyter Notebooks] -->|Lectura| QuestDB
-    end
-
-    QuestDB -->|Visualización| Grafana
+    %% Research Flow
+    QuestDB -->|Consultar Histórico| Notebooks[Jupyter / Backtesting]
+    Notebooks -->|Desarrollar| StrategyCode[Código de Estrategia]
+    
+    %% Production Flow
+    StrategyCode -->|Desplegar| LiveEngine[Motor de Trading (Prism)]
+    QuestDB -->|Datos de Warm-up| LiveEngine
+    QuestDB -->|Datos en Tiempo Real| LiveEngine
+    
+    %% Execution
+    LiveEngine -->|Órdenes| Broker[API del Broker]
 ```
 
 ## 🚀 Características Principales
