@@ -15,22 +15,22 @@ Spectrum utiliza una arquitectura híbrida donde **QuestDB** actúa como la fuen
 ```mermaid
 graph TD
     %% External Data Source
-    Tiingo[Tiingo API] -->|Datos Crudos| Ingester[Servicio de Ingesta]
+    Tiingo["Tiingo API"] -->|Datos Crudos| Ingester["Servicio de Ingesta"]
     
     %% Storage Layer
-    Ingester -->|Insertar| QuestDB[(QuestDB)]
+    Ingester -->|Insertar| QuestDB[("QuestDB")]
     
     %% Research Flow
-    QuestDB -->|Consultar Histórico| Notebooks[Jupyter / Backtesting]
-    Notebooks -->|Desarrollar| StrategyCode[Código de Estrategia]
+    QuestDB -->|Consultar Histórico| Notebooks["Jupyter / Backtesting"]
+    Notebooks -->|Desarrollar| StrategyCode["Código de Estrategia"]
     
     %% Production Flow
-    StrategyCode -->|Desplegar| LiveEngine[Motor de Trading (Prism)]
+    StrategyCode -->|Desplegar| LiveEngine["Motor de Trading (Prism)"]
     QuestDB -->|Datos de Warm-up| LiveEngine
     QuestDB -->|Datos en Tiempo Real| LiveEngine
     
     %% Execution
-    LiveEngine -->|Órdenes| Broker[API del Broker]
+    LiveEngine -->|Órdenes| Broker["API del Broker"]
 ```
 
 ## 🚀 Características Principales
