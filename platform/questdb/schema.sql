@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS assets (
     active BOOLEAN
 ) TIMESTAMP(ts) PARTITION BY YEAR WAL;
 
+
 -- 2. market (Datos)
 CREATE TABLE IF NOT EXISTS market (
     ts TIMESTAMP,
@@ -61,9 +62,9 @@ CREATE TABLE IF NOT EXISTS orders (
     id SYMBOL INDEX,       -- UUID interno
     ticker SYMBOL INDEX,
     side SYMBOL,
-    type SYMBOL,           -- MKT, LMT
+    order_type SYMBOL,     -- MKT, LMT
     quantity DOUBLE,
-    limit DOUBLE,          -- Precio límite solicitado
+    price_limit DOUBLE,    -- Precio límite solicitado
     status SYMBOL,         -- NEW, FILLED
     strategy SYMBOL        -- Origen
 ) TIMESTAMP(ts) PARTITION BY DAY WAL;
@@ -72,7 +73,7 @@ CREATE TABLE IF NOT EXISTS orders (
 CREATE TABLE IF NOT EXISTS fills (
     ts TIMESTAMP,
     id SYMBOL INDEX,            -- ID externo del exchange
-    order SYMBOL INDEX,         -- Referencia a orders.id
+    order_id SYMBOL INDEX,      -- Referencia a orders.id
     ticker SYMBOL INDEX,
     side SYMBOL,
     price DOUBLE,               -- Precio real pagado

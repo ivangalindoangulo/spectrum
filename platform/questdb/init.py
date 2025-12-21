@@ -10,13 +10,20 @@ SCHEMA_FILE = "schema.sql"
 
 def wait_for_questdb():
     print(f"⏳ Connecting to QuestDB at {QUESTDB_HOST}...", flush=True)
-    retries = 30
+    # Wait a bit for network to settle
+    time.sleep(2)
+    
+    retries = 60
     while retries > 0:
         try:
-            r = requests.get(f"{QUESTDB_HOST}/status")
+            # Try root which should return the console HTML, or /status
+            r = requests.get(f"{QUESTDB_HOST}/", timeout=5)
             if r.status_code == 200:
                 print("✅ QuestDB Online.", flush=True)
                 return True
+            else:
+                 print(f"⚠️ Connected but got status {r.status_code}. Assuming Online.", flush=True)
+                 return True
         except requests.exceptions.ConnectionError:
             pass
         except Exception as e:
