@@ -22,3 +22,5 @@ dependencies:
     - vectorbt
     - backtrader
     - qf-lib
+    - pandas-ta
+    - python-binance
