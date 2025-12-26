@@ -10,17 +10,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Copy environment file
 COPY environment.yml .
 
-# Create environment (using name 'prism-env')
+# Create environment (using name 'data_inv')
 RUN conda env create -f environment.yml
 
 # Make RUN commands use the new environment:
-SHELL ["conda", "run", "-n", "prism-env", "/bin/bash", "-c"]
+SHELL ["conda", "run", "-n", "data_inv", "/bin/bash", "-c"]
 
 # Verify installation
 RUN python --version
 
 # IMPORTANT: The ENTRYPOINT ensures `conda run` executes the command
-ENTRYPOINT ["conda", "run", "--no-capture-output", "-n", "prism-env"]
+ENTRYPOINT ["conda", "run", "--no-capture-output", "-n", "data_inv", "/bin/bash", "-c"]
 
 # Default command
-CMD ["python", "main.py"]
+CMD ["python", "ingestion/service.py"]  
