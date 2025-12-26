@@ -1,4 +1,4 @@
-name: prism-env
+name: data_inv
 channels:
   - conda-forge
   - defaults
@@ -24,3 +24,4 @@ dependencies:
     - qf-lib
     - pandas-ta
     - python-binance
+    - python-dotenv

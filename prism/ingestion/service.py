@@ -23,41 +23,70 @@ class IngestionService:
     def run_backfill(self, start_date: str):
         """
         Backfills historical data. Checks latest DB timestamp to avoid re-downloading everything.
+        Uses chunking to handle large datasets robustly.
         """
         from utils.config import Config
+        import pandas as pd
+        from datetime import timedelta
+        
         print(f"--- Starting Backfill ({self.source}) ---")
         
         for ticker in self.tickers:
-            # 1. Check DB for last timestamp
+            # 1. Determine Start Date
             last_ts = self.db.get_latest_timestamp(ticker)
             
-            # Determine effective start date
             if last_ts:
-                print(f"[{datetime.now()}] Found existing data for {ticker}. Last entry: {last_ts}")
-                # Start from the last timestamp found
-                # Binance requires string format or int, convert datetime to string
-                # We add a small buffer to avoid overlap if desired, but QuestDB handles dedup usually
-                effective_start = last_ts.strftime("%d %b, %Y")
+                # Add 1 min to avoid overlap
+                start_dt = last_ts + timedelta(minutes=1)
+                print(f"[{datetime.now()}] Found existing data for {ticker}. Resuming form: {start_dt}")
             else:
-                print(f"[{datetime.now()}] No existing data for {ticker}. Starting full download from {start_date}.")
-                effective_start = start_date
+                # Parse config start string
+                try:
+                    start_dt = pd.to_datetime(start_date).to_pydatetime()
+                except:
+                    # Fallback
+                    start_dt = datetime.strptime(start_date, "%d %b, %Y")
+                
+                print(f"[{datetime.now()}] No existing data for {ticker}. Starting full download from {start_dt}.")
 
-            # 2. Fetch History
-            if self.source == 'binance':
-                interval = Config.KLINE_INTERVAL
-                print(f"[{datetime.now()}] Downloading history for {ticker} ({interval}) since {effective_start}...")
-                # Binance processor handles the pagination logic
-                history = self.processor.get_historical_data(ticker, interval=interval, start_str=effective_start)
-            else:
-                # Tiingo logic (simple daily usually)
-                history = self.processor.get_historical_data(ticker, start_date=effective_start)
+            # 2. Loop in Chunks (e.g. 15 days) to ensure stability
+            # 15 days * 1440 mins = 21,600 rows. Very safe.
+            now = datetime.now()
+            chunk_size = timedelta(days=15)
+            
+            current_start = start_dt
+            
+            while current_start < now:
+                current_end = min(current_start + chunk_size, now)
                 
-            # 3. Store
-            if history:
-                self.db.insert_bulk_data(ticker, history, source=self.source)
-            else:
-                print(f"[{datetime.now()}] Data is up to date.")
+                # Format for Binance (usually accepts strings like "1 Jan, 2020")
+                # We can also pass timestamps if supported, but string is safest with python-binance wrapper
+                s_str = current_start.strftime("%d %b, %Y %H:%M:%S")
+                e_str = current_end.strftime("%d %b, %Y %H:%M:%S")
                 
+                if self.source == 'binance':
+                    interval = Config.KLINE_INTERVAL
+                    print(f"[{datetime.now()}] Downloading chunk {s_str} -> {e_str}...")
+                    try:
+                        history = self.processor.get_historical_data(ticker, interval=interval, start_str=s_str, end_str=e_str)
+                        if history:
+                            self.db.insert_bulk_data(ticker, history, source=self.source)
+                            print(f"   -> Inserted {len(history)} records.")
+                        else:
+                            print("   -> No data in this chunk (gap?).")
+                    except Exception as e:
+                         print(f"   -> Error in chunk: {e}")
+                else:
+                    # Tiingo (keep simple for now, usually daily)
+                    # Tiingo logic...
+                    history = self.processor.get_historical_data(ticker, start_date=s_str)
+                    if history:
+                        self.db.insert_bulk_data(ticker, history, source=self.source)
+                        
+                # Move forward
+                current_start = current_end
+                time.sleep(0.5) # Rate limit politeness
+
         print("--- Backfill Complete ---")
 
     def run_live_ingestion(self):

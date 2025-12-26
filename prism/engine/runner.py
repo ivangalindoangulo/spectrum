@@ -62,30 +62,58 @@ class StrategyEngine:
     def run(self):
         print(f"--- Starting Strategy Engine for {self.symbol} ---")
         
-        # 1. Warm-up
-        history = self.get_history(limit=50)
+        # 1. Wait for DB and Warm-up
+        history = []
+        while True:
+            history = self.get_history(limit=50)
+            if history:
+                print(f"[{datetime.now()}] Engine: DB connection established using {len(history)} records.")
+                break
+            else:
+                print(f"[{datetime.now()}] Engine: Waiting for market data to act available...")
+                time.sleep(10)
+        
         self.strategy.on_start(history)
         
         last_timestamp = None
         if history:
-            # We assume 'timestamp' column exists. In QuestDB ILP it's the designated timestamp.
-            # Usually strict name is 'timestamp' but ILP might name it 'timestamp' if we configured it,
-            # or it is the default designated timestamp column. QuestDB default designated ts is 'timestamp'.
+            # We assume 'timestamp' column exists
             last_timestamp = history[-1].get('timestamp')
 
         # 2. Main Loop
         while True:
             latest = self.get_latest()
-            print(f"Engine: processing {latest}")
+            
             if latest:
-                ts = latest.get('timestamp')
-                # Only process if it's new
-                if ts != last_timestamp:
-                    price = latest.get('price')
-                    self.strategy.on_tick(price, ts)
-                    last_timestamp = ts
-                else:
-                    # No new data
-                    pass
+                ts_str = latest.get('timestamp')
+                # QuestDB REST returns ISO string usually: '2025-01-01T12:00:00.000000Z'
+                # We need to parse it to check freshness
+                try:
+                    # Clean Z if present for fromisoformat
+                    ts = datetime.fromisoformat(ts_str.replace('Z', '+00:00'))
+                    
+                    # Check Freshness (e.g. is data from today/recent?)
+                    # Current UTC time
+                    now = datetime.now(ts.tzinfo) # Use timezone from ts if avail
+                    diff = now - ts
+                    
+                    # If data is older than 1 hour, we assume backfill is still running or system is catching up
+                    if diff.total_seconds() > 3600:
+                        print(f"[{datetime.now()}] Engine: Syncing... Current DB Head: {ts}")
+                        time.sleep(5)
+                        continue
+                        
+                    # Process tick if new
+                    if ts_str != last_timestamp:
+                        print(f"Engine: processing {latest}")
+                        price = latest.get('price')
+                        self.strategy.on_tick(price, ts)
+                        last_timestamp = ts_str
+                except Exception as e:
+                    print(f"Timestamp Parse Error: {e}")
+
+            else:
+               # No data returned (maybe table locked or empty)
+               pass
             
             time.sleep(5) # Poll frequency
