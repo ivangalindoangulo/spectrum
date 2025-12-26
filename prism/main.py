@@ -5,12 +5,14 @@ from ingestion.service import IngestionService
 from strategies.trend_following import TrendFollowing
 from engine.runner import StrategyEngine
 
-def run_ingestion(tickers):
+from utils.config import Config
+
+def run_ingestion(tickers, source='tiingo'):
     # Runs the ingestion loop
-    service = IngestionService(tickers)
+    service = IngestionService(tickers, source=source)
     # Start with backfill (optional, maybe controlled by env var)
     try:
-        service.run_backfill("2024-01-01")
+        service.run_backfill(Config.BACKFILL_START_DATE)
     except Exception as e:
         print(f"Backfill missing or failed: {e}")
         
@@ -25,17 +27,16 @@ def run_strategy(ticker):
     engine.run()
 
 def main():
-    print("--------------------------------------------------")
-    print("Spectrum - Prism Service (Hybrid Architecture)")
-    print("--------------------------------------------------")
+    Config.print_config()
     
-    ticker = "aapl"
+    ticker = Config.TARGET_TICKER
+    source = Config.DATA_SOURCE
     
     # We use threads to simulate the microservices running together in this single container.
     # In a full production scale, these would be separate containers/deployments.
     
     # 1. Ingestion Thread
-    ingest_thread = threading.Thread(target=run_ingestion, args=([ticker],), daemon=True)
+    ingest_thread = threading.Thread(target=run_ingestion, args=([ticker], source), daemon=True)
     ingest_thread.start()
     
     # 2. Strategy Engine Thread

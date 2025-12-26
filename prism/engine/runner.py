@@ -5,18 +5,20 @@ from storage.questdb_handler import QuestDBHandler
 # We need a SQL client.
 import requests # We can use REST API for querying QuestDB
 
+from utils.config import Config
+
 class StrategyEngine:
     def __init__(self, strategy):
         self.strategy = strategy
         self.symbol = strategy.symbol
         # QuestDB REST API
-        self.query_url = "http://questdb:9000/exec" 
+        self.query_url = f"http://{Config.QUESTDB_HOST}:9000/exec" 
 
     def get_history(self, limit=100):
         """
         Selects recent history from QuestDB.
         """
-        query = f"SELECT * FROM market_data WHERE symbol = '{self.symbol}' ORDER BY timestamp DESC LIMIT {limit}"
+        query = f"SELECT * FROM market WHERE symbol = '{self.symbol}' ORDER BY timestamp DESC LIMIT {limit}"
         try:
             r = requests.get(self.query_url, params={'query': query})
             if r.status_code == 200:
@@ -44,7 +46,7 @@ class StrategyEngine:
         Polls for the absolute latest record.
         """
         # Limiting to 1 gives the latest
-        query = f"SELECT * FROM market_data WHERE symbol = '{self.symbol}' ORDER BY timestamp DESC LIMIT 1"
+        query = f"SELECT * FROM market WHERE symbol = '{self.symbol}' ORDER BY timestamp DESC LIMIT 1"
         try:
             r = requests.get(self.query_url, params={'query': query})
             if r.status_code == 200:
