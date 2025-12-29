@@ -15,7 +15,7 @@ Spectrum utiliza una arquitectura híbrida donde **QuestDB** actúa como la fuen
 ```mermaid
 graph TD
     %% External Data Source
-    Tiingo["Tiingo API"] -->|Datos Crudos| Ingester["Servicio de Ingesta"]
+    ["API"] -->|Datos Crudos| Ingester["Servicio de Ingesta"]
     
     %% Storage Layer
     Ingester -->|Insertar| QuestDB[("QuestDB")]
@@ -36,6 +36,7 @@ graph TD
 ## 🚀 Características Principales
 
 - **Almacenamiento de Alto Rendimiento:** Utiliza **QuestDB** para el almacenamiento y recuperación ultrarrápida de series temporales.
+- **Ingesta Agnóstica:** Arquitectura diseñada para conectar múltiples fuentes de datos (Binance, Tiingo, AlphaVantage, etc.) de forma transparente.
 - **Analítica en Tiempo Real:** Integración con **Apache Flink** para el procesamiento de streams con estado (en progreso).
 - **Visualización Interactiva:** Dashboards de **Grafana** preconfigurados para monitorear datos de mercado y métricas del sistema.
 - **Núcleo Modular (Prism):** Capa de aplicación basada en Python para procesadores de datos, algoritmos y servicios de utilidad, gestionada vía **Conda**.
