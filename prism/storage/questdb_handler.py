@@ -170,11 +170,14 @@ class QuestDBHandler:
                     ts_nanos = int(ts_val) * 1_000_000    
                 else:
                     # String ISO format
-                    # Parse and convert
                     dt = datetime.fromisoformat(str(ts_val).replace('Z', '+00:00'))
                     ts_nanos = int(dt.timestamp() * 1_000_000_000)
 
                 # ILP Line: table,tags fields timestamp
+                if ts_nanos == 0:
+                    print(f"Skipping row with 0 timestamp (missing date): {row}")
+                    continue
+                    
                 line = f"market,{tags} {fields_str} {ts_nanos}"
                 rows_ilp.append(line)
 

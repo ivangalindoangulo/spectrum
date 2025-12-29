@@ -132,15 +132,12 @@ class IngestionService:
                 try:
                     data = self.processor.get_latest_price(ticker)
                     if data:
-                        timestamp = datetime.now() # Default if not provided
+                        timestamp = datetime.now(timezone.utc) # Default if not provided
                         price = 0.0
 
                         if self.source == 'binance':
-                            # Binance format: {'symbol': 'BTCUSDT', 'price': '123.45'} checks
                             price = float(data.get('price', 0.0))
-                            # Binance ticker endpoint doesn't always return a timestamp, so we use current server time
                         else:
-                            # Tiingo format includes timestamp
                             price = data.get('last')
                             if 'timestamp' in data:
                                 timestamp = datetime.fromisoformat(data['timestamp'])

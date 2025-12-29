@@ -40,8 +40,8 @@ def main():
     ingest_thread.start()
     
     # 2. Strategy Engine Thread
-    strategy_thread = threading.Thread(target=run_strategy, args=(ticker,), daemon=True)
-    strategy_thread.start()
+    #strategy_thread = threading.Thread(target=run_strategy, args=(ticker,), daemon=True)
+    #strategy_thread.start()
     
     try:
         while True:
