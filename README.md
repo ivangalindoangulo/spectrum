@@ -15,7 +15,7 @@ Spectrum utiliza una arquitectura híbrida donde **QuestDB** actúa como la fuen
 ```mermaid
 graph TD
     %% External Data Source
-    ["API"] -->|Datos Crudos| Ingester["Servicio de Ingesta"]
+    API_NODE["API"] -->|Datos Crudos| Ingester["Servicio de Ingesta"]
     
     %% Storage Layer
     Ingester -->|Insertar| QuestDB[("QuestDB")]
