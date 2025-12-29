@@ -1,6 +1,13 @@
 version: '3.8'
 
 services:
+  sysctl-init:
+    image: busybox:latest
+    container_name: spectrum-sysctl-init
+    command: sysctl -w vm.max_map_count=1048576
+    privileged: true
+    restart: "no"
+
   questdb:
     image: questdb/questdb:latest
     container_name: spectrum-questdb
@@ -11,9 +18,17 @@ services:
     volumes:
       - ./questdb/data:/var/lib/questdb
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '2.00'
+          memory: 4G
     environment:
       - QDB_CAIRO_COMMIT_LAG=1000
       - QDB_CAIRO_MAX_UNCOMMITTED_ROWS=1000
+    depends_on:
+      sysctl-init:
+        condition: service_completed_successfully
 
   grafana:
     image: grafana/grafana:latest
@@ -23,6 +38,11 @@ services:
     volumes:
       - ./grafana/data:/var/lib/grafana
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 512M
     depends_on:
       - questdb
 
@@ -37,6 +57,11 @@ services:
         FLINK_PROPERTIES=
         jobmanager.rpc.address: jobmanager
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1.00'
+          memory: 1G
 
   taskmanager:
     image: flink:latest
@@ -50,6 +75,11 @@ services:
         jobmanager.rpc.address: jobmanager
         taskmanager.numberOfTaskSlots: 2
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1.00'
+          memory: 1G
 
   schema-init:
     image: python:3.9-slim
@@ -62,6 +92,11 @@ services:
     command: >
       bash -c "pip install requests && python init.py"
     restart: on-failure
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 256M
 
 networks:
   default:

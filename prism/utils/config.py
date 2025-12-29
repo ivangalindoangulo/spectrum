@@ -19,8 +19,8 @@ class Config:
     DATA_SOURCE = os.getenv("DATA_SOURCE", "binance").lower()
     
     # 3. Backfill Configuration
-    # Fecha de inicio para descargar datos históricos (Formato libre entendible, ej: "1 Jan, 2024" o "2024-01-01")
-    BACKFILL_START_DATE = os.getenv("BACKFILL_START_DATE", "1 Jan, 2024")
+    # Fecha de inicio para descargar datos históricos (Formato libre entendible, ej: "1 Jan, 2025" o "2025-01-01")
+    BACKFILL_START_DATE = os.getenv("BACKFILL_START_DATE", "1 Jan, 2025")
     
     # 4. Data Details
     # Intervalo de velas para Binance (1m, 1h, 1d, etc.)

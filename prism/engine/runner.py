@@ -18,7 +18,7 @@ class StrategyEngine:
         """
         Selects recent history from QuestDB.
         """
-        query = f"SELECT * FROM market WHERE symbol = '{self.symbol}' ORDER BY timestamp DESC LIMIT {limit}"
+        query = f"SELECT * FROM market WHERE ticker = '{self.symbol}' ORDER BY ts DESC LIMIT {limit}"
         try:
             r = requests.get(self.query_url, params={'query': query})
             if r.status_code == 200:
@@ -46,7 +46,7 @@ class StrategyEngine:
         Polls for the absolute latest record.
         """
         # Limiting to 1 gives the latest
-        query = f"SELECT * FROM market WHERE symbol = '{self.symbol}' ORDER BY timestamp DESC LIMIT 1"
+        query = f"SELECT * FROM market WHERE ticker = '{self.symbol}' ORDER BY ts DESC LIMIT 1"
         try:
             r = requests.get(self.query_url, params={'query': query})
             if r.status_code == 200:
@@ -77,15 +77,15 @@ class StrategyEngine:
         
         last_timestamp = None
         if history:
-            # We assume 'timestamp' column exists
-            last_timestamp = history[-1].get('timestamp')
+            # We assume 'ts' column exists
+            last_timestamp = history[-1].get('ts')
 
         # 2. Main Loop
         while True:
             latest = self.get_latest()
             
             if latest:
-                ts_str = latest.get('timestamp')
+                ts_str = latest.get('ts')
                 # QuestDB REST returns ISO string usually: '2025-01-01T12:00:00.000000Z'
                 # We need to parse it to check freshness
                 try:
@@ -106,7 +106,7 @@ class StrategyEngine:
                     # Process tick if new
                     if ts_str != last_timestamp:
                         print(f"Engine: processing {latest}")
-                        price = latest.get('price')
+                        price = latest.get('close')
                         self.strategy.on_tick(price, ts)
                         last_timestamp = ts_str
                 except Exception as e:

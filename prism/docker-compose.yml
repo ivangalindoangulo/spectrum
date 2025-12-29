@@ -9,12 +9,12 @@ services:
     volumes:
       - .:/app
     environment:
-      - QUESTDB_HOST=http://questdb:9000
+      - QUESTDB_HOST=questdb
       - TIINGO_API_KEY=${TIINGO_API_KEY}
     networks:
       - spectrum-network
     restart: unless-stopped
-    command: python main.py
+    command: python -u main.py
 
 networks:
   spectrum-network:

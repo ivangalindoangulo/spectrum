@@ -20,7 +20,7 @@ SHELL ["conda", "run", "-n", "data_inv", "/bin/bash", "-c"]
 RUN python --version
 
 # IMPORTANT: The ENTRYPOINT ensures `conda run` executes the command
-ENTRYPOINT ["conda", "run", "--no-capture-output", "-n", "data_inv", "/bin/bash", "-c"]
+ENTRYPOINT ["conda", "run", "--no-capture-output", "-n", "data_inv"]
 
 # Default command
-CMD ["python", "ingestion/service.py"]  
+CMD ["python", "main.py"]  
