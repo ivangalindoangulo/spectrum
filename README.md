@@ -1,6 +1,6 @@
 <div align="center">
   <h1>🔍 Spectrum</h1>
-  <h3>High-Performance Quantitative Trading Infrastructure</h3>
+  <h3>Infraestructura de Trading Cuantitativo de Alto Rendimiento</h3>
   
   [![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
   [![TimescaleDB](https://img.shields.io/badge/TimescaleDB-PostgreSQL_17-black?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.timescale.com/)
@@ -9,111 +9,111 @@
   [![License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](LICENSE)
 
   <p>
-    <b>Spectrum</b> is a modular, event-driven trading stack built for rigorous quantitative analysis and algorithmic execution.
+    <b>Spectrum</b> es un stack de trading modular y orientado a eventos, construido para el análisis cuantitativo riguroso y la ejecución algorítmica.
     <br />
-    Designed on clean architecture principles, it decouples the <b>Data/Infrastructure Layer</b> from the <b>Business Logic Layer</b>, ensuring scalability, maintainability, and high-throughput data processing.
+    Diseñado bajo principios de arquitectura limpia, desacopla la <b>Capa de Datos/Infraestructura</b> de la <b>Capa de Lógica de Negocio</b>, garantizando escalabilidad, mantenibilidad y un procesamiento de datos de alto rendimiento.
   </p>
 </div>
 
 ---
 
-## 🏗️ Architecture
+## 🏗️ Arquitectura
 
-Spectrum leverages a containerized microservices architecture where **TimescaleDB** serves as the unified source of truth for both high-frequency time-series market data and transactional relational data (orders, portfolio state).
+Spectrum aprovecha una arquitectura de microservicios contenerizada donde **TimescaleDB** (PostgreSQL) actúa como la fuente de verdad unificada, manejando tanto datos de mercado de series temporales de alta frecuencia como datos relacionales transaccionales (órdenes, estado del portafolio).
 
 ```mermaid
 graph TD
     classDef infra fill:#f9f,stroke:#333,stroke-width:2px;
     classDef app fill:#bbf,stroke:#333,stroke-width:2px;
 
-    subgraph Infrastructure
-        TimescaleDB[("TimescaleDB (PostgreSQL 17)")]:::infra
-        Grafana["Grafana Dashboards"]:::infra
+    subgraph Infra ["Infraestructura"]
+        TimescaleDB[("TimescaleDB")]:::infra
+        Grafana["Tableros Grafana"]:::infra
     end
 
-    subgraph Application "Prism"
-        Ingester["Ingestion Service (Async)"]:::app
-        Engine["Strategy Engine"]:::app
+    subgraph App ["Aplicación (Prism)"]
+        Ingester["Servicio de Ingesta (Async)"]:::app
+        Engine["Motor de Estrategias"]:::app
     end
 
-    API["External APIs (Binance/Tiingo)"] -->|Raw Data Streams| Ingester
-    Ingester -->|Batch Insert (Upsert)| TimescaleDB
+    API["APIs"] -->|Streams de Datos Crudos| Ingester
+    Ingester -->|Inserción por Lotes (Upsert)| TimescaleDB
     
-    TimescaleDB -->|Historical Data| Engine
-    TimescaleDB -->|System Metrics| Grafana
+    TimescaleDB -->|Datos Históricos| Engine
+    TimescaleDB -->|Métricas del Sistema| Grafana
     
-    Engine -->|Signals & Orders| TimescaleDB
-    Engine -->|Execution| Broker["Broker API"]
+    Engine -->|Señales y Órdenes| TimescaleDB
+    Engine -->|Ejecución| Broker["API del Broker"]
 ```
 
-## 🚀 Key Engineering Features
+## 🚀 Ingeniería y Características Clave
 
-*   **Hybrid Storage Engine**: Exploits **TimescaleDB Hypertables** to achieve O(1) insert performance for massive time-series datasets while maintaining full SQL compliance for complex analytical queries.
-*   **Resilient Ingestion Pipeline**: The `Prism` service implements intelligent backfilling mechanisms that automatically detect data gaps and resume ingestion, ensuring data continuity without manual intervention.
-*   **Optimized Database Schema**: A meticulously designed schema with 7 core tables (`assets`, `market`, `models`, `signals`, `risk`, `orders`, `fills`), fully indexed and partitioned by time intervals.
-*   **Clean Code & Modularity**: Application logic (Prism) is strictly separated from infrastructure orchestration. Dependencies are managed via **Conda** to ensure reproducible research environments.
-*   **Observability First**: Native integration with **Grafana** provides real-time visualization of market data lag, system health, and trading performance.
+*   **Motor de Almacenamiento Híbrido**: Explota las **Hypertables de TimescaleDB** para lograr un rendimiento de inserción O(1) en conjuntos de datos masivos de series temporales, manteniendo total compatibilidad SQL para consultas analíticas complejas.
+*   **Pipeline de Ingesta Resiliente**: El servicio `Prism` implementa mecanismos de "backfilling" inteligente que detectan automáticamente huecos en los datos y reanudan la ingesta, asegurando la continuidad de los datos sin intervención manual.
+*   **Esquema de Base de Datos Optimizado**: Un diseño meticuloso con 7 tablas core (`assets`, `market`, `models`, `signals`, `risk`, `orders`, `fills`), totalmente indexadas y particionadas por intervalos de tiempo.
+*   **Código Limpio y Modularidad**: La lógica de la aplicación (Prism) está estrictamente separada de la orquestación de infraestructura. Las dependencias se gestionan vía **Conda** para asegurar entornos de investigación reproducibles.
+*   **Observabilidad "First-Class"**: Integración nativa con **Grafana** que proporciona visualización en tiempo real de la latencia de datos, salud del sistema y rendimiento del trading.
 
-## 🛠️ Technology Stack
+## 🛠️ Stack Tecnológico
 
-| Domain | Tech Stack | Evaluation |
+| Dominio | Tecnología | Evaluación |
 | :--- | :--- | :--- |
-| **Business Logic** | **Python 3.11+** | Selected for its rich ecosystem in Data Science (Pandas, NumPy) and modern AsyncIO capabilities. |
-| **Database** | **TimescaleDB** | Chosen over QuestDB/InfluxDB for its ability to handle relational data (users, portfolios) alongside metric data in a single ACID-compliant system. |
-| **Interface** | **Psycopg2** | Industry-standard PostgreSQL adapter optimized for high-throughput batch insertions. |
-| **Orchestration** | **Docker Compose** | Simplifies deployment into isolated, reproducible environments (Infrastructure vs Application). |
-| **Visualization** | **Grafana** | Provides zero-code, highly customizable dashboards connected directly to the DB. |
+| **Lógica de Negocio** | **Python 3.11+** | Seleccionado por su rico ecosistema en Ciencia de Datos (Pandas, NumPy) y capacidades modernas de AsyncIO. |
+| **Base de Datos** | **TimescaleDB** | Elegido sobre QuestDB/InfluxDB por su capacidad para manejar datos relacionales (usuarios, portafolios) junto con métricas en un solo sistema ACID. |
+| **Interfaz** | **Psycopg2** | Adaptador de PostgreSQL estándar en la industria, optimizado para inserciones por lotes de alto rendimiento. |
+| **Orquestación** | **Docker Compose** | Simplifica el despliegue en entornos aislados y reproducibles (Infraestructura vs Aplicación). |
+| **Visualización** | **Grafana** | Proporciona tableros altamente personalizables y sin código ("zero-code") conectados directamente a la BD. |
 
-## 📂 Project Structure
+## 📂 Estructura del Proyecto
 
 ```bash
 spectrum/
-├── platform/           # Infrastructure Layer
+├── platform/           # Capa de Infraestructura
 │   ├── docker-compose.yml
-│   ├── timescaledb/    # DB Initialization & Schema Definition
-│   │   └── init/schema.sql  # Hypertable Definitions
-│   └── grafana/        # Dashboard Provisioning
-├── prism/              # Application Layer (Business Logic)
+│   ├── timescaledb/    # Inicialización de BD y Definición de Esquema
+│   │   └── init/schema.sql  # Definiciones de Hypertables
+│   └── grafana/        # Aprovisionamiento de Tableros
+├── prism/              # Capa de Aplicación (Lógica de Negocio)
 │   ├── docker-compose.yml
-│   ├── environment.yml # Conda Environment Lockfile
-│   ├── engine/         # Quantitative Strategy Runner
-│   ├── ingestion/      # Multi-source Data Ingestors
-│   ├── storage/        # Database Abstraction Layer
-│   └── utils/          # Configuration & Logging
-└── notebooks/          # Research & Backtesting Sandboxes
+│   ├── environment.yml # Lockfile de Entorno Conda
+│   ├── engine/         # Ejecutor de Estrategias Cuantitativas
+│   ├── ingestion/      # Ingestores de Datos Multi-fuente
+│   ├── storage/        # Capa de Abstracción de Base de Datos
+│   └── utils/          # Configuración y Logging
+└── notebooks/          # Sandboxes de Investigación y Backtesting
 ```
 
-## ⚡ Quick Start
+## ⚡ Inicio Rápido
 
-### Prerequisites
-*   Docker Desktop & Docker Compose
+### Requisitos Previos
+*   Docker Desktop y Docker Compose
 *   Git
 
-### Deployment
+### Despliegue
 
-**1. Infrastructure Layer** (Database & Monitoring)
+**1. Capa de Infraestructura** (Base de Datos y Monitoreo)
 ```bash
 cd platform
 docker-compose up -d
-# Services: TimescaleDB (5432), Grafana (3000)
+# Servicios: TimescaleDB (Puerto 5432), Grafana (Puerto 3000)
 ```
 
-**2. Application Layer** (Prism Service)
+**2. Capa de Aplicación** (Servicio Prism)
 ```bash
 cd ../prism
 docker-compose build
 docker-compose up -d
 ```
 
-### Verification
-Access the running database container to verify data ingestion:
+### Verificación
+Accede al contenedor de la base de datos en ejecución para verificar la ingesta de datos:
 ```bash
 docker exec -it spectrum-timescaledb psql -U postgres -d spectrum -c "SELECT ticker, count(*) FROM market GROUP BY ticker;"
 ```
 
-## � Contact
+## 📧 Contacto
 **Ivan Galindo Angulo**  
-[GitHub Profile](https://github.com/ivangalindoangulo)  
+[Perfil de GitHub](https://github.com/ivangalindoangulo)  
 
 ---
-*Open Source project released under the [MIT License](LICENSE).*
+*Proyecto de Código Abierto liberado bajo la [Licencia MIT](LICENSE).*
