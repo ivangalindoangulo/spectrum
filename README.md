@@ -31,13 +31,13 @@ graph TD
         Grafana["Tableros Grafana"]:::infra
     end
 
-    subgraph App ["Aplicación (Prism)"]
-        Ingester["Servicio de Ingesta (Async)"]:::app
+    subgraph App ["Aplicación Prism"]
+        Ingester["Servicio de Ingesta"]:::app
         Engine["Motor de Estrategias"]:::app
     end
 
     API["APIs"] -->|Streams de Datos Crudos| Ingester
-    Ingester -->|Inserción por Lotes (Upsert)| TimescaleDB
+    Ingester -->|Inserción por Lotes| TimescaleDB
     
     TimescaleDB -->|Datos Históricos| Engine
     TimescaleDB -->|Métricas del Sistema| Grafana
