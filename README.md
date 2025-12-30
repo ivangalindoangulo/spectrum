@@ -1,19 +1,12 @@
-<div align="center">
-  <h1>🔍 Spectrum</h1>
-  <h3>Infraestructura de Trading Cuantitativo de Alto Rendimiento</h3>
-  
-  [![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
-  [![TimescaleDB](https://img.shields.io/badge/TimescaleDB-PostgreSQL_17-black?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.timescale.com/)
-  [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://docker.com)
-  [![Grafana](https://img.shields.io/badge/Grafana-Monitoring-F46800?style=for-the-badge&logo=grafana&logoColor=white)](https://grafana.com)
-  [![License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](LICENSE)
+# Spectrum 
+### Plataforma de Trading Cuantitativo de Alto Rendimiento
 
-  <p>
-    <b>Spectrum</b> es un stack de trading modular y orientado a eventos, construido para el análisis cuantitativo riguroso y la ejecución algorítmica.
-    <br />
-    Diseñado bajo principios de arquitectura limpia, desacopla la <b>Capa de Datos/Infraestructura</b> de la <b>Capa de Lógica de Negocio</b>, garantizando escalabilidad, mantenibilidad y un procesamiento de datos de alto rendimiento.
-  </p>
-</div>
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![Python](https://img.shields.io/badge/python-3.11+-blue.svg)
+![TimescaleDB](https://img.shields.io/badge/database-TimescaleDB-green.svg)
+![Status](https://img.shields.io/badge/status-desarrollo-orange.svg)
+
+Spectrum es un stack de trading moderno, escalable y modular diseñado para el análisis cuantitativo, la ingesta de datos en tiempo real y el trading algorítmico. Separa la lógica central de la aplicación (`Prism`) de la infraestructura subyacente (`Platform`) para garantizar flexibilidad y rendimiento.
 
 ---
 
@@ -23,27 +16,23 @@ Spectrum aprovecha una arquitectura de microservicios contenerizada donde **Time
 
 ```mermaid
 graph TD
-    classDef infra fill:#f9f,stroke:#333,stroke-width:2px;
-    classDef app fill:#bbf,stroke:#333,stroke-width:2px;
-
-    subgraph Infra ["Infraestructura"]
-        TimescaleDB[("TimescaleDB")]:::infra
-        Grafana["Tableros Grafana"]:::infra
-    end
-
-    subgraph App ["Aplicación Prism"]
-        Ingester["Servicio de Ingesta"]:::app
-        Engine["Motor de Estrategias"]:::app
-    end
-
-    API["APIs"] -->|Streams de Datos Crudos| Ingester
-    Ingester -->|Inserción por Lotes| TimescaleDB
+    %% External Data Source
+    API_NODE["API"] -->|Datos Crudos| Ingester["Servicio de Ingesta"]
     
-    TimescaleDB -->|Datos Históricos| Engine
-    TimescaleDB -->|Métricas del Sistema| Grafana
+    %% Storage Layer
+    Ingester -->|Insertar| TimescaleDB[("TimescaleDB")]
     
-    Engine -->|Señales y Órdenes| TimescaleDB
-    Engine -->|Ejecución| Broker["API del Broker"]
+    %% Research Flow
+    TimescaleDB -->|Consultar Histórico| Notebooks["Jupyter / Backtesting"]
+    Notebooks -->|Desarrollar| StrategyCode["Código de Estrategia"]
+    
+    %% Production Flow
+    StrategyCode -->|Desplegar| LiveEngine["Motor de Trading (Prism)"]
+    TimescaleDB -->|Datos de Warm-up| LiveEngine
+    TimescaleDB -->|Datos en Tiempo Real| LiveEngine
+    
+    %% Execution
+    LiveEngine -->|Órdenes| Broker["API del Broker"]
 ```
 
 ## 🚀 Ingeniería y Características Clave
