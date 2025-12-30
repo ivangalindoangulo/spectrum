@@ -9,7 +9,11 @@ services:
     volumes:
       - .:/app
     environment:
-      - QUESTDB_HOST=questdb
+      - DB_HOST=timescaledb
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=password
+      - DB_NAME=spectrum
       - TIINGO_API_KEY=${TIINGO_API_KEY}
     networks:
       - spectrum-network

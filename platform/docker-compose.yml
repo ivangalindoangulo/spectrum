@@ -1,34 +1,24 @@
 version: '3.8'
 
 services:
-  sysctl-init:
-    image: busybox:latest
-    container_name: spectrum-sysctl-init
-    command: sysctl -w vm.max_map_count=1048576
-    privileged: true
-    restart: "no"
-
-  questdb:
-    image: questdb/questdb:latest
-    container_name: spectrum-questdb
+  timescaledb:
+    image: timescale/timescaledb:latest-pg17
+    container_name: spectrum-timescaledb
+    environment:
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_USER=postgres
+      - POSTGRES_DB=spectrum
     ports:
-      - "9000:9000"
-      - "9009:9009"
-      - "8812:8812"
+      - "5432:5432"
     volumes:
-      - ./questdb/data:/var/lib/questdb
+      - ./timescaledb/data:/var/lib/postgresql/data
+      - ./timescaledb/init:/docker-entrypoint-initdb.d
     restart: unless-stopped
     deploy:
       resources:
         limits:
           cpus: '2.00'
-          memory: 4G
-    environment:
-      - QDB_CAIRO_COMMIT_LAG=1000
-      - QDB_CAIRO_MAX_UNCOMMITTED_ROWS=1000
-    depends_on:
-      sysctl-init:
-        condition: service_completed_successfully
+          memory: 2G
 
   grafana:
     image: grafana/grafana:latest
@@ -44,59 +34,7 @@ services:
           cpus: '0.50'
           memory: 512M
     depends_on:
-      - questdb
-
-  jobmanager:
-    image: flink:latest
-    container_name: spectrum-jobmanager
-    ports:
-      - "8081:8081"
-    command: jobmanager
-    environment:
-      - |
-        FLINK_PROPERTIES=
-        jobmanager.rpc.address: jobmanager
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          cpus: '1.00'
-          memory: 1G
-
-  taskmanager:
-    image: flink:latest
-    container_name: spectrum-taskmanager
-    depends_on:
-      - jobmanager
-    command: taskmanager
-    environment:
-      - |
-        FLINK_PROPERTIES=
-        jobmanager.rpc.address: jobmanager
-        taskmanager.numberOfTaskSlots: 2
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          cpus: '1.00'
-          memory: 1G
-
-  schema-init:
-    image: python:3.9-slim
-    container_name: spectrum-schema-init
-    depends_on:
-      - questdb
-    volumes:
-      - ./questdb:/app
-    working_dir: /app
-    command: >
-      bash -c "pip install requests && python init.py"
-    restart: on-failure
-    deploy:
-      resources:
-        limits:
-          cpus: '0.50'
-          memory: 256M
+      - timescaledb
 
 networks:
   default:

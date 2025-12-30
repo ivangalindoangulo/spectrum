@@ -1,63 +1,36 @@
 import time
-from datetime import datetime
-from storage.questdb_handler import QuestDBHandler
-# We need a way to query QuestDB. The Handler was for Ingestion (Sender).
-# We need a SQL client.
-import requests # We can use REST API for querying QuestDB
-
+from datetime import datetime, timezone
+from storage.timescale_handler import TimescaleHandler
 from utils.config import Config
 
 class StrategyEngine:
     def __init__(self, strategy):
         self.strategy = strategy
         self.symbol = strategy.symbol
-        # QuestDB REST API
-        self.query_url = f"http://{Config.QUESTDB_HOST}:9000/exec" 
+        
+        self.db = TimescaleHandler(
+            host=Config.DB_HOST,
+            port=Config.DB_PORT,
+            user=Config.DB_USER,
+            password=Config.DB_PASSWORD,
+            dbname=Config.DB_NAME
+        )
 
     def get_history(self, limit=100):
         """
-        Selects recent history from QuestDB.
+        Selects recent history from DB.
         """
-        query = f"SELECT * FROM market WHERE ticker = '{self.symbol}' ORDER BY ts DESC LIMIT {limit}"
-        try:
-            r = requests.get(self.query_url, params={'query': query})
-            if r.status_code == 200:
-                data = r.json()
-                # QuestDB returns {'columns': [...], 'dataset': [[...], [...]]}
-                # We need to map it to list of dicts
-                columns = [c['name'] for c in data['columns']]
-                dataset = data['dataset']
-                
-                results = []
-                # dataset is ordered DESC (latest first), so we should reverse it for warm-up
-                for row in reversed(dataset):
-                    record = dict(zip(columns, row))
-                    results.append(record)
-                return results
-            else:
-                print(f"Error querying history: {r.text}")
-                return []
-        except Exception as e:
-            print(f"Engine DB Error: {e}")
-            return []
+        results = self.db.get_history(self.symbol, limit=limit)
+        # Runner expects chronological order for warm-up?
+        # Original: "dataset is ordered DESC... so we should reverse it"
+        # Handler returns DESC. So we reverse it here.
+        return results[::-1]
 
     def get_latest(self):
         """
         Polls for the absolute latest record.
         """
-        # Limiting to 1 gives the latest
-        query = f"SELECT * FROM market WHERE ticker = '{self.symbol}' ORDER BY ts DESC LIMIT 1"
-        try:
-            r = requests.get(self.query_url, params={'query': query})
-            if r.status_code == 200:
-                data = r.json()
-                if data['count'] > 0:
-                    columns = [c['name'] for c in data['columns']]
-                    row = data['dataset'][0]
-                    return dict(zip(columns, row))
-        except Exception as e:
-            pass
-        return None
+        return self.db.get_latest(self.symbol)
 
     def run(self):
         print(f"--- Starting Strategy Engine for {self.symbol} ---")
@@ -85,35 +58,39 @@ class StrategyEngine:
             latest = self.get_latest()
             
             if latest:
-                ts_str = latest.get('ts')
-                # QuestDB REST returns ISO string usually: '2025-01-01T12:00:00.000000Z'
-                # We need to parse it to check freshness
-                try:
-                    # Clean Z if present for fromisoformat
-                    ts = datetime.fromisoformat(ts_str.replace('Z', '+00:00'))
-                    
-                    # Check Freshness (e.g. is data from today/recent?)
-                    # Current UTC time
-                    now = datetime.now(ts.tzinfo) # Use timezone from ts if avail
-                    diff = now - ts
-                    
-                    # If data is older than 1 hour, we assume backfill is still running or system is catching up
-                    if diff.total_seconds() > 3600:
-                        print(f"[{datetime.now()}] Engine: Syncing... Current DB Head: {ts}")
-                        time.sleep(5)
-                        continue
-                        
-                    # Process tick if new
-                    if ts_str != last_timestamp:
-                        print(f"Engine: processing {latest}")
-                        price = latest.get('close')
-                        self.strategy.on_tick(price, ts)
-                        last_timestamp = ts_str
-                except Exception as e:
-                    print(f"Timestamp Parse Error: {e}")
+                # ts should be datetime object from psycopg2
+                ts = latest.get('ts')
+                
+                if not isinstance(ts, datetime):
+                     # Fallback if somehow not datetime
+                     try:
+                        ts = datetime.fromisoformat(str(ts).replace('Z', '+00:00'))
+                     except:
+                        pass
 
+                # Check Freshness (e.g. is data from today/recent?)
+                # Current UTC time
+                now = datetime.now(timezone.utc)
+                if ts.tzinfo is None:
+                    # Assume UTC if naive
+                    ts = ts.replace(tzinfo=timezone.utc)
+                    
+                diff = now - ts
+                
+                # If data is older than 1 hour, we assume backfill is still running or system is catching up
+                if diff.total_seconds() > 3600:
+                    print(f"[{datetime.now()}] Engine: Syncing... Current DB Head: {ts}")
+                    time.sleep(5)
+                    continue
+                    
+                # Process tick if new
+                if ts != last_timestamp:
+                    print(f"Engine: processing {latest.get('close')}")
+                    price = latest.get('close')
+                    self.strategy.on_tick(price, ts)
+                    last_timestamp = ts
             else:
-               # No data returned (maybe table locked or empty)
+               # No data returned
                pass
             
             time.sleep(5) # Poll frequency

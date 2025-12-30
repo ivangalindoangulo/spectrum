@@ -32,12 +32,12 @@ class Config:
     BINANCE_API_KEY = os.getenv("BINANCE_API_KEY")
     BINANCE_SECRET_KEY = os.getenv("BINANCE_SECRET_KEY")
 
-    # 5. Database Config
-    # If running locally (not in docker compose network), use 'localhost'
-    # 'questdb' is the hostname within the docker network usually.
-    # We'll try to be smart or default to localhost if not set.
-    QUESTDB_HOST = os.getenv("QUESTDB_HOST", "localhost")
-    QUESTDB_PORT = int(os.getenv("QUESTDB_PORT", 9009))
+    # 5. Database Config (TimescaleDB/Postgres)
+    DB_HOST = os.getenv("DB_HOST", "localhost")
+    DB_PORT = int(os.getenv("DB_PORT", 5432))
+    DB_USER = os.getenv("DB_USER", "postgres")
+    DB_PASSWORD = os.getenv("DB_PASSWORD", "password")
+    DB_NAME = os.getenv("DB_NAME", "spectrum")
 
     @classmethod
     def print_config(cls):
@@ -45,5 +45,5 @@ class Config:
         print(f"Target Ticker:     {cls.TARGET_TICKER}")
         print(f"Data Source:       {cls.DATA_SOURCE}")
         print(f"Backfill Start:    {cls.BACKFILL_START_DATE}")
-        print(f"QuestDB Host:      {cls.QUESTDB_HOST}:{cls.QUESTDB_PORT}")
+        print(f"Database Host:     {cls.DB_HOST}:{cls.DB_PORT}")
         print("-----------------------------------------------")

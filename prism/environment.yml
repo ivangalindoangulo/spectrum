@@ -10,7 +10,7 @@ dependencies:
   - requests
   - ipykernel
   - pip:
-    - questdb
+    - psycopg2-binary
     - tiingo
     - websocket-client
     - python-binance
