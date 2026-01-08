@@ -1,96 +1,126 @@
 import time
+import threading
 from datetime import datetime, timezone
+import json
+
 from storage.timescale_handler import TimescaleHandler
 from utils.config import Config
 
-class StrategyEngine:
-    def __init__(self, strategy):
+# Import Agents
+from agents.market_data_agent import MarketDataAgent
+from agents.quant_agent import QuantAgent
+from agents.risk_manager_agent import RiskManagerAgent
+from agents.portfolio_manager_agent import PortfolioManagerAgent
+
+from strategies.interface import StrategyInterface
+
+class AgentOrchestrator:
+    """
+    Coordinator that drives the AI Hedge Fund pipeline:
+    Market Data -> Quant -> Risk -> Portfolio
+    
+    It runs in its own thread for a specific symbol/strategy pair.
+    """
+    def __init__(self, symbol: str, strategy: StrategyInterface, db_handler: TimescaleHandler):
+        self.symbol = symbol
         self.strategy = strategy
-        self.symbol = strategy.symbol
+        self.db = db_handler
+        self.stop_requested = False
         
-        self.db = TimescaleHandler(
-            host=Config.DB_HOST,
-            port=Config.DB_PORT,
-            user=Config.DB_USER,
-            password=Config.DB_PASSWORD,
-            dbname=Config.DB_NAME
-        )
+        # Initialize Agents
+        self.market_agent = MarketDataAgent()
+        self.quant_agent = QuantAgent(symbol, strategy) # Inject Strategy
+        self.risk_agent = RiskManagerAgent()
+        self.portfolio_agent = PortfolioManagerAgent()
+        
+        print(f"[{datetime.now()}] Orchestrator initialized for {symbol} ({strategy.name})")
 
-    def get_history(self, limit=100):
-        """
-        Selects recent history from DB.
-        """
-        results = self.db.get_history(self.symbol, limit=limit)
-        # Runner expects chronological order for warm-up?
-        # Original: "dataset is ordered DESC... so we should reverse it"
-        # Handler returns DESC. So we reverse it here.
-        return results[::-1]
-
-    def get_latest(self):
-        """
-        Polls for the absolute latest record.
-        """
-        return self.db.get_latest(self.symbol)
 
     def run(self):
-        print(f"--- Starting Strategy Engine for {self.symbol} ---")
+        """
+        Main execution loop.
+        """
+        print(f"--- Starting Orchestrator for {self.symbol} ---")
         
-        # 1. Wait for DB and Warm-up
-        history = []
-        while True:
-            history = self.get_history(limit=50)
-            if history:
-                print(f"[{datetime.now()}] Engine: DB connection established using {len(history)} records.")
-                break
-            else:
-                print(f"[{datetime.now()}] Engine: Waiting for market data to act available...")
-                time.sleep(10)
-        
-        self.strategy.on_start(history)
+        # 1. Warm-up
+        history = self._fetch_history_for_warmup()
+        self.market_agent.warm_up(history)
         
         last_timestamp = None
         if history:
-            # We assume 'ts' column exists
-            last_timestamp = history[-1].get('ts')
+             last_timestamp = history[-1].get('ts')
 
         # 2. Main Loop
-        while True:
-            latest = self.get_latest()
-            
-            if latest:
-                # ts should be datetime object from psycopg2
-                ts = latest.get('ts')
+        while not self.stop_requested:
+            try:
+                latest = self.db.get_latest(self.symbol)
                 
-                if not isinstance(ts, datetime):
-                     # Fallback if somehow not datetime
-                     try:
-                        ts = datetime.fromisoformat(str(ts).replace('Z', '+00:00'))
-                     except:
-                        pass
+                if latest:
+                    ts = latest.get('ts')
+                    # Ensure timezone aware
+                    if ts.tzinfo is None:
+                        ts = ts.replace(tzinfo=timezone.utc)
+                        
+                    # Process only if new tick
+                    if ts != last_timestamp:
+                        price = latest.get('close')
+                        self.process_pipeline(price, ts)
+                        last_timestamp = ts
+                        
+            except Exception as e:
+                print(f"Error in orchestrator loop {self.symbol}: {e}")
+                
+            time.sleep(1) # Poll frequency
 
-                # Check Freshness (e.g. is data from today/recent?)
-                # Current UTC time
-                now = datetime.now(timezone.utc)
-                if ts.tzinfo is None:
-                    # Assume UTC if naive
-                    ts = ts.replace(tzinfo=timezone.utc)
-                    
-                diff = now - ts
-                
-                # If data is older than 1 hour, we assume backfill is still running or system is catching up
-                if diff.total_seconds() > 3600:
-                    print(f"[{datetime.now()}] Engine: Syncing... Current DB Head: {ts}")
-                    time.sleep(5)
-                    continue
-                    
-                # Process tick if new
-                if ts != last_timestamp:
-                    print(f"Engine: processing {latest.get('close')}")
-                    price = latest.get('close')
-                    self.strategy.on_tick(price, ts)
-                    last_timestamp = ts
-            else:
-               # No data returned
-               pass
+    def process_pipeline(self, price, timestamp):
+        """
+        Executes one full cycle of the agent pipeline.
+        """
+        # Step 1: Market Data Agent
+        market_state = self.market_agent.process_tick(price, timestamp)
+        
+        # Step 2: Quant Agent (Generate Signal)
+        signal = self.quant_agent.analyze(market_state)
+        
+        # Traceability: Record Signal
+        signal_id = self.db.record_signal(
+            strategy_id=signal['strategy_id'],
+            ticker=signal['symbol'],
+            signal=signal['signal'],
+            confidence=signal['confidence'],
+            analysis_json=signal['analysis']
+        )
+        
+        if signal['signal'] == "HOLD":
+            return # No action needed
+
+        # Step 3: Risk Manager Agent (Validate)
+        risk_check = self.risk_agent.validate(signal)
+        
+        # Traceability: Record Risk Check
+        risk_check_id = self.db.record_risk_check(
+            signal_id=signal_id,
+            approved=risk_check['approved'],
+            adjusted_size=risk_check['adjusted_size'],
+            reason=risk_check['reason']
+        )
+        
+        # Step 4: Portfolio Manager Agent (Execute)
+        if risk_check['approved']:
+            order_result = self.portfolio_agent.execute(risk_check, signal)
             
-            time.sleep(5) # Poll frequency
+            # Traceability: Record Order
+            self.db.record_order(
+                risk_check_id=risk_check_id,
+                status=order_result['status'],
+                execution_price=price 
+            )
+
+    def _fetch_history_for_warmup(self):
+        # Helper to get data from DB
+        raw = self.db.get_history(self.symbol, limit=50)
+        return raw[::-1] # Reverse to chrono order
+
+    def stop(self):
+        self.stop_requested = True
+

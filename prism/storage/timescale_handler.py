@@ -43,6 +43,54 @@ class TimescaleHandler:
             finally:
                 self.conn = None
 
+    
+    def init_traceability_tables(self):
+        """Creates tables for signals, risk checks, and orders."""
+        if not self.conn:
+            return
+
+        queries = [
+            """
+            CREATE TABLE IF NOT EXISTS signals (
+                id SERIAL PRIMARY KEY,
+                ts TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                strategy_id TEXT NOT NULL,
+                ticker TEXT NOT NULL,
+                signal TEXT NOT NULL,
+                confidence FLOAT,
+                analysis_json JSONB
+            );
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS risk_checks (
+                id SERIAL PRIMARY KEY,
+                ts TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                signal_id INTEGER REFERENCES signals(id),
+                approved BOOLEAN NOT NULL,
+                adjusted_size FLOAT,
+                reason TEXT
+            );
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS orders (
+                id SERIAL PRIMARY KEY,
+                ts TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                risk_check_id INTEGER REFERENCES risk_checks(id),
+                status TEXT NOT NULL,
+                execution_price FLOAT,
+                filled_size FLOAT
+            );
+            """
+        ]
+
+        try:
+            with self.conn.cursor() as cur:
+                for q in queries:
+                    cur.execute(q)
+            print(f"[{datetime.now()}] Traceability tables (signals, risk_checks, orders) ready.")
+        except Exception as e:
+            print(f"[{datetime.now()}] Error initializing traceability tables: {e}")
+
     def init_db(self):
         """Creates the necessary tables and hypertable."""
         if not self.conn:
@@ -72,6 +120,10 @@ class TimescaleHandler:
                 for q in queries:
                     cur.execute(q)
             print(f"[{datetime.now()}] Database initialized (Table 'market' ready).")
+            
+            # Init traceability tables as well
+            self.init_traceability_tables()
+            
         except Exception as e:
             print(f"[{datetime.now()}] Error initializing database: {e}")
 
@@ -187,10 +239,6 @@ class TimescaleHandler:
         try:
             with self.conn.cursor() as cur:
                 # Return dictionary-like objects
-                # We can use RealDictCursor globally or just map it here.
-                # Let's map manually to keep it simple or use dictionary cursor if easy.
-                # Standard cursor returns tuples.
-                
                 cur.execute("""
                     SELECT ts, ticker, provider, interval, open, high, low, close, volume 
                     FROM market 
@@ -203,11 +251,6 @@ class TimescaleHandler:
                 results = []
                 for row in cur.fetchall():
                     results.append(dict(zip(cols, row)))
-                
-                # Reverse to have chronological order if needed (runner expects DESC for limit, but often processes chronological?)
-                # Runner.get_history reversed it. Let's see runner logic.
-                # Runner: "dataset is ordered DESC... so we should reverse it for warm-up"
-                # So we return DESC here as well (latest first).
                 
                 return results
                 
@@ -239,4 +282,47 @@ class TimescaleHandler:
                     return dict(zip(cols, row))
                 return None
         except Exception as e:
+            return None
+            
+    # --- Traceability Methods ---
+    def record_signal(self, strategy_id, ticker, signal, confidence, analysis_json):
+        if not self.conn: return None
+        try:
+            with self.conn.cursor() as cur:
+                cur.execute("""
+                    INSERT INTO signals (strategy_id, ticker, signal, confidence, analysis_json)
+                    VALUES (%s, %s, %s, %s, %s)
+                    RETURNING id
+                """, (strategy_id, ticker, signal, confidence, analysis_json))
+                return cur.fetchone()[0]
+        except Exception as e:
+            print(f"Error recording signal: {e}")
+            return None
+
+    def record_risk_check(self, signal_id, approved, adjusted_size, reason):
+        if not self.conn: return None
+        try:
+            with self.conn.cursor() as cur:
+                cur.execute("""
+                    INSERT INTO risk_checks (signal_id, approved, adjusted_size, reason)
+                    VALUES (%s, %s, %s, %s)
+                    RETURNING id
+                """, (signal_id, approved, adjusted_size, reason))
+                return cur.fetchone()[0]
+        except Exception as e:
+            print(f"Error recording risk check: {e}")
+            return None
+
+    def record_order(self, risk_check_id, status, execution_price=0.0):
+        if not self.conn: return None
+        try:
+            with self.conn.cursor() as cur:
+                cur.execute("""
+                    INSERT INTO orders (risk_check_id, status, execution_price)
+                    VALUES (%s, %s, %s)
+                    RETURNING id
+                """, (risk_check_id, status, execution_price))
+                return cur.fetchone()[0]
+        except Exception as e:
+            print(f"Error recording order: {e}")
             return None
